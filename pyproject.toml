@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "helix-backend"
+version = "0.1.0"
+description = "Modular SOA Backend with External API Orchestration"
+authors = ["Destiny Team"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.0"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+httpx = "^0.25.0"
+tenacity = "^8.2.0"
+redis = "^5.0.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+python-dotenv = "^1.0.0"
+structlog = "^23.2.0"
+cryptography = "^41.0.0"
+pyjwt = "^2.8.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+httpx = "^0.25.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helix Bot - Autenticazione OAuth</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .code-box {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .instructions {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        .telegram-btn {
+            background: #0088cc;
+        }
+        .telegram-btn:hover {
+            background: #006699;
+        }
+        #countdown {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎮</div>
+        <h1>Helix Destiny Bot</h1>
+        <p>Autenticazione OAuth Bungie.net</p>
+        
+        <div id="status" class="status loading">
+            ⏳ In attesa dell'autorizzazione...
+        </div>
+        
+        <div id="code-section" class="hidden">
+            <p><strong>Il tuo codice di autorizzazione:</strong></p>
+            <div class="code-box" id="auth-code"></div>
+            <div id="countdown">⏰ Codice valido per: <span id="timer">120</span> secondi</div>
+            <button class="btn" onclick="copyCode()">📋 Copia Codice</button>
+            <a id="telegram-link" href="#" target="_blank">
+                <button class="btn telegram-btn">📱 Apri Telegram</button>
+            </a>
+        </div>
+        
+        <div id="error-section" class="hidden">
+            <p>❌ Errore durante l'autenticazione</p>
+            <p id="error-message"></p>
+            <button class="btn" onclick="location.reload()">🔄 Riprova</button>
+        </div>
+        
+        <div class="instructions">
+            <h3>📖 Istruzioni:</h3>
+            <ol>
+                <li>Clicca su "Autorizza su Bungie.net"</li>
+                <li>Accedi con il tuo account Bungie</li>
+                <li>Autorizza Helix Bot</li>
+                <li>Torna su questa pagina automaticamente</li>
+                <li>Copia il codice e aprilo in Telegram</li>
+            </ol>
+        </div>
+        
+        <button id="auth-btn" class="btn" onclick="startAuth()">
+            🔐 Autorizza su Bungie.net
+        </button>
+    </div>
+
+    <script>
+        let countdownInterval;
+        
+        // Controlla se siamo tornati dal callback OAuth
+        const urlParams = new URLSearchParams(window.location.search);
+        const authCode = urlParams.get('code');
+        const error = urlParams.get('error');
+        
+        if (authCode) {
+            showCode(authCode);
+        } else if (error) {
+            showError(error);
+        }
+        
+        function startAuth() {
+            // Reindirizza all'URL di autorizzazione Bungie
+            const authUrl = 'https://www.bungie.net/it/OAuth/Authorize?client_id=51890&response_type=code&state=helix_state';
+            window.location.href = authUrl;
+        }
+        
+        function showCode(code) {
+            document.getElementById('status').className = 'status success';
+            document.getElementById('status').innerHTML = '✅ Autenticazione completata!';
+            document.getElementById('code-section').classList.remove('hidden');
+            document.getElementById('auth-code').textContent = code;
+            document.getElementById('auth-btn').classList.add('hidden');
+            
+            // Genera link Telegram con codice precompilato
+            const telegramUrl = `https://t.me/D1tracker_bot?start=auth_${code}`;
+            document.getElementById('telegram-link').href = telegramUrl;
+            
+            // Avvia countdown
+            let timeLeft = 120;
+            document.getElementById('timer').textContent = timeLeft;
+            
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('status').className = 'status error';
+                    document.getElementById('status').innerHTML = '⚠️ Codice scaduto! Riprova.';
+                }
+            }, 1000);
+            
+            // Auto-copy dopo 1 secondo
+            setTimeout(() => {
+                copyCode();
+            }, 1000);
+        }
+        
+        function showError(errorMsg) {
+            document.getElementById('status').className = 'status error';
+            document.getElementById('status').innerHTML = '❌ Errore di autenticazione';
+            document.getElementById('error-section').classList.remove('hidden');
+            document.getElementById('error-message').textContent = errorMsg;
+            document.getElementById('auth-btn').classList.add('hidden');
+        }
+        
+        function copyCode() {
+            const code = document.getElementById('auth-code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('📋 Codice copiato! Ora aprilo in Telegram e usa: /auth_code ' + code);
+            }).catch(() => {
+                // Fallback per browser che non supportano clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('📋 Codice copiato! Ora aprilo in Telegram e usa: /auth_code ' + code);
+            });
+        }
+    </script>
+</body>
+</html>
