@@ -24,11 +24,11 @@ class D1ActivityMode:
 
 # D1 Raid Hashes with Italian names
 D1_RAID_NAMES = {
-    # Vault of Glass - Antro di Cristallo
-    "2048260250": "🟡 Antro di Cristallo (Normale)",
-    "1946620227": "🟡 Antro di Cristallo (Difetto)",
-    "1014020645": "🟡 Antro di Cristallo (390)",
-    "2178968300": "🟡 Antro di Cristallo (Prestigio)",
+    # Vault of Glass - Volta di Vetro
+    "2048260250": "🟡 Volta di Vetro (Normale)",
+    "1946620227": "🟡 Volta di Vetro (Difetto)",
+    "1014020645": "🟡 Volta di Vetro (390)",
+    "2178968300": "🟡 Volta di Vetro (Prestigio)",
     # Crota's End - La Fine di Crota
     "2693136600": "🟢 La Fine di Crota (Normale)",
     "1375099857": "🟢 La Fine di Crota (Difetto)",
@@ -40,11 +40,11 @@ D1_RAID_NAMES = {
     "1142458582": "🔵 La Caduta del Re (390)",
     "2186849900": "🔵 La Caduta del Re (Prestigio)",
     "2197680900": "🔵 La Caduta del Re (Sfida)",
-    # Wrath of the Machine - Ira della Macchina
-    "10898880": "🔴 Ira della Macchina (Normale)",
-    "2608159054": "🔴 Ira della Macchina (Eroica)",
-    "2200634800": "🔴 Ira della Macchina (Prestigio)",
-    "2201622100": "🔴 Ira della Macchina (Sfida)",
+    # Furia Mecanica - Furia Mecanica
+    "10898880": "🔴 Furia Mecanica (Normale)",
+    "2608159054": "🔴 Furia Mecanica (Eroica)",
+    "2200634800": "🔴 Furia Mecanica (Prestigio)",
+    "2201622100": "🔴 Furia Mecanica (Sfida)",
     # Prison of Elders
     "2444515908": "🟣 Prigione degli Anziani (Liv. 32)",
     "2444515909": "🟣 Prigione degli Anziani (Liv. 34)",

@@ -44,8 +44,8 @@ async def telegram_webhook(update: dict):
         result = await orchestrator.handle_d1_inventory(chat_id, gamertag)
         return {"ok": True, "result": result}
     
-    elif text == "/d1_xur":
-        result = await orchestrator.handle_d1_xur(chat_id)
+    elif text == "/d1_vendors":
+        result = await orchestrator.handle_d1_vendors(chat_id)
         return {"ok": True, "result": result}
     
     elif text == "/d1_pvp":
@@ -89,6 +89,96 @@ async def telegram_webhook(update: dict):
         result = await orchestrator.handle_d1_global_leaderboard(chat_id, category)
         return {"ok": True, "result": result}
     
+    elif text.startswith("/d1_loadout "):
+        parts = text.split(" ", 2)
+        if len(parts) >= 3:
+            gamertag = parts[1].strip()
+            stats_wanted = parts[2].strip()
+            result = await orchestrator.handle_d1_loadout(chat_id, gamertag, stats_wanted)
+        else:
+            result = await orchestrator.handle_d1_loadout_help(chat_id)
+        return {"ok": True, "result": result}
+    
+    elif text.startswith("/d1_optimize "):
+        parts = text.split(" ", 2)
+        if len(parts) >= 3:
+            gamertag = parts[1].strip()
+            target_stats = parts[2].strip()
+            result = await orchestrator.handle_d1_optimize(chat_id, gamertag, target_stats)
+        else:
+            result = await orchestrator.handle_d1_optimize_help(chat_id)
+        return {"ok": True, "result": result}
+    
+    elif text.startswith("/d1_inventory_advanced "):
+        gamertag = text.split(" ", 1)[1].strip()
+        result = await orchestrator.handle_d1_inventory_advanced(chat_id, gamertag)
+        return {"ok": True, "result": result}
+    
+    elif text == "/d1_equip_check":
+        result = await orchestrator.handle_d1_equip_check(chat_id)
+        return {"ok": True, "result": result}
+    
+    elif text.startswith("/d1_equip "):
+        parts = text.split(" ", 2)
+        if len(parts) >= 3:
+            gamertag = parts[1].strip()
+            item_name = parts[2].strip()
+            result = await orchestrator.handle_d1_equip(chat_id, gamertag, item_name)
+        else:
+            result = await orchestrator.handle_d1_equip_help(chat_id)
+        return {"ok": True, "result": result}
+    
+    elif text.startswith("/d1_events"):
+        planet = None
+        if text.startswith("/d1_events "):
+            planet = text.split(" ", 1)[1].strip()
+        result = await orchestrator.handle_d1_events(chat_id, planet)
+        return {"ok": True, "result": result}
+    
+    elif text.startswith("/d1_events_subscribe"):
+        planets = None
+        if text.startswith("/d1_events_subscribe "):
+            planets = text.split(" ", 1)[1].strip()
+        result = await orchestrator.handle_d1_events_subscribe(chat_id, planets)
+        return {"ok": True, "result": result}
+    
+    elif text == "/d1_events_unsubscribe":
+        result = await orchestrator.handle_d1_events_unsubscribe(chat_id)
+        return {"ok": True, "result": result}
+    
+    elif text == "/d1_events_status":
+        result = await orchestrator.handle_d1_events_status(chat_id)
+        return {"ok": True, "result": result}
+    
+    elif text == "/d1_token":
+        result = await orchestrator.handle_d1_token_status(chat_id)
+        return {"ok": True, "result": result}
+    
+    elif text.startswith("/auth_code "):
+        auth_code = text.split(" ", 1)[1].strip()
+        result = await orchestrator.handle_oauth_code(chat_id, auth_code)
+        return {"ok": True, "result": result}
+    
+    elif text == "/auth":
+        from app.services.oauth_handler import get_oauth_handler
+        oauth = get_oauth_handler()
+        auth_url = oauth.get_auth_url(str(chat_id))
+        await orchestrator.telegram.send_message(
+            chat_id,
+            f"🔐 <b>Autenticazione Bungie.net</b>\n\n"
+            f"1️⃣ Clicca il link:\n<a href='{auth_url}'>Autenticati su Bungie.net</a>\n\n"
+            f"2️⃣ Autorizza l'app\n\n"
+            f"3️⃣ Copia il codice di autorizzazione\n\n"
+            f"4️⃣ Incolla qui con:\n"
+            f"<code>/auth_code TUO_CODICE</code>\n\n"
+            f"<i>⚡ Il codice scade dopo 10 minuti</i>"
+        )
+        return {"ok": True, "auth_url": auth_url}
+    
+    elif text == "/d1_warsat":
+        result = await orchestrator.handle_d1_warsat(chat_id)
+        return {"ok": True, "result": result}
+    
     elif text == "/start":
         from app.services.adapters import TelegramAdapter
         telegram = TelegramAdapter()
@@ -96,7 +186,7 @@ async def telegram_webhook(update: dict):
             chat_id,
             "🌌 <b>DESTINY 1</b>\n"
             "Legacy Guardian Network\n\n"
-            "� <b>Ehi Guardiano, sei ancora vivo?</b>\n\n"
+            "👋 <b>Ehi Guardiano, sei ancora vivo?</b>\n\n"
             "Dopo tutti questi anni pensavamo fossi passato a Destiny 2… o peggio, a Warframe!\n"
             "Invece eccoti qui, a rispolverare il vecchio server.\n\n"
             "🛡️ <b>La Luce si sta spegnendo… ma tu hai risposto.</b>\n\n"
@@ -167,7 +257,22 @@ async def telegram_webhook(update: dict):
             "👥 <b>Clan Rankings</b>\n"
             "• <code>/d1_clan_ranking &lt;nome_clan&gt;</code>\n"
             "  Classifica clan competitiva\n\n"
-            "�� <b>Autenticazione</b>\n"
+            "🔔 <b>Notifiche Eventi</b>\n"
+            "• <code>/d1_events</code> - Visualizza eventi pubblici imminenti\n"
+            "• <code>/d1_events Terra</code> - Filtra per pianeta\n"
+            "• <code>/d1_events_subscribe</code> - Iscriviti alle notifiche\n"
+            "• <code>/d1_events_subscribe Terra, Luna</code> - Solo specifici pianeti\n"
+            "• <code>/d1_events_unsubscribe</code> - Disiscriviti\n"
+            "• <code>/d1_events_status</code> - Stato iscrizione\n\n"
+            "🎯 <b>Loadout Optimizer</b>\n"
+            "• <code>/d1_loadout &lt;gamertag&gt; &lt;stats&gt;</code>\n"
+            "  Trova il set armature perfetto per le statistiche desiderate\n"
+            "• <code>/d1_optimize &lt;gamertag&gt; &lt;target&gt;</code>\n"
+            "  Ottimizzazione avanzata con raccomandazioni\n\n"
+            "📦 <b>Inventario Avanzato</b>\n"
+            "• <code>/d1_inventory_advanced &lt;gamertag&gt;</code>\n"
+            "  Gestione completa inventario con categorie e filtri\n\n"
+            "🔐 <b>Autenticazione</b>\n"
             "• <code>/auth</code> - Autenticazione automatica\n"
             "• <code>/auth_code &lt;codice&gt;</code> - Autenticazione manuale\n"
             "• <code>/oauth_status</code> - Stato token OAuth\n\n"

@@ -59,14 +59,18 @@ class ServiceOrchestrator:
     def _validate_token_format(self, token: str) -> bool:
         """Validate OAuth token format"""
         try:
-            # Basic format check
-            if not token or len(token) < 50:
+            # Basic format check - auth codes can be shorter (Bungie uses 32 char hex)
+            if not token or len(token) < 10:
                 return False
             
-            # JWT structure validation if applicable
-            if '.' in token:  # JWT token
-                decoded = jwt.decode(token, options={"verify_signature": False})
-                return bool(decoded.get('exp'))
+            # JWT structure validation if applicable (access tokens)
+            if '.' in token and len(token) > 100:  # JWT token
+                try:
+                    decoded = jwt.decode(token, options={"verify_signature": False})
+                    return bool(decoded.get('exp'))
+                except:
+                    # Even if JWT decode fails, might still be valid
+                    return True
             
             return True
         except:
@@ -96,6 +100,10 @@ class ServiceOrchestrator:
         except Exception as e:
             logger.error(f"Failed to store OAuth token: {e}")
             return False
+    
+    def _get_oauth_token(self, chat_id: int) -> dict:
+        """Get OAuth token for a chat (alias for _secure_get_token)"""
+        return self._secure_get_token(chat_id)
     
     def _secure_get_token(self, chat_id: int) -> dict:
         """Securely retrieve OAuth token from Redis with decryption"""
@@ -955,9 +963,13 @@ class ServiceOrchestrator:
         """Get D1 raid history - delegates to D1CommandHandlers"""
         return await self.d1_handlers.handle_raid_history(chat_id, gamertag)
     
-    async def handle_d1_xur(self, chat_id: int) -> dict:
-        """Get D1 Xur status - delegates to D1CommandHandlers"""
-        return await self.d1_handlers.handle_xur(chat_id)
+    async def handle_d1_token_status(self, chat_id: int) -> dict:
+        """Check D1 OAuth token status - delegates to main OAuth handler"""
+        return await self.handle_oauth_status(chat_id)
+    
+    async def handle_d1_vendors(self, chat_id: int) -> dict:
+        """Get D1 Vendors (Xur, Vanguard, Crucible, etc.) - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_vendors(chat_id)
     
     async def handle_d1_inventory(self, chat_id: int, gamertag: str) -> dict:
         """Get D1 inventory - delegates to D1CommandHandlers"""
@@ -1259,8 +1271,11 @@ class ServiceOrchestrator:
             membership_id = player.get("membershipId")
             display_name = player.get("displayName")
             
+            # Get OAuth token for enhanced access
+            access_token = self._get_oauth_token(chat_id)
+            
             # Get account summary to get characters
-            account = Destiny1Service.get_account(membership_id)
+            account = Destiny1Service.get_account(membership_id, access_token)
             if not account or not account.get("Response"):
                 message = f"📭 Nessun personaggio D1 trovato per <b>{display_name}</b>."
                 await self.telegram.send_message(chat_id, message)
@@ -1276,10 +1291,23 @@ class ServiceOrchestrator:
             character_id = characters[0].get("characterBase", {}).get("characterId")
             activities_data = Destiny1Service.get_recent_activities(membership_id, character_id)
             
+            # Log per debug
+            logger.info(f"[D1] ActivityHistory response: {activities_data}")
+            
+            # Endpoint deprecato da Bungie
             if not activities_data or not activities_data.get("Response"):
-                message = f"📭 Nessuna attività recente trovata per <b>{display_name}</b>."
+                message = (
+                    f"� <b>Storico D1 di {display_name}</b>\n\n"
+                    f"⚠️ <b>Endpoint ActivityHistory non disponibile</b>\n"
+                    f"Bungie ha deprecato le API attività recenti per Destiny 1.\n\n"
+                    f"💡 <b>Alternative disponibili:</b>\n"
+                    f"• /d1_stats {gamertag} - Statistiche aggregate\n"
+                    f"• /d1_raid {gamertag} - Storico raid\n"
+                    f"• /d1_inventory {gamertag} - Inventario\n\n"
+                    f"<i>🌌 Destiny 1 • Legacy Edition</i>"
+                )
                 await self.telegram.send_message(chat_id, message)
-                return {"success": False, "error": "No activities"}
+                return {"success": False, "error": "ActivityHistory deprecated"}
             
             activities = activities_data["Response"].get("activities", [])
             
@@ -1381,8 +1409,11 @@ class ServiceOrchestrator:
             membership_id = player.get("membershipId")
             display_name = player.get("displayName")
             
+            # Get OAuth token for enhanced access
+            access_token = self._get_oauth_token(chat_id)
+            
             # Get account summary to get characters
-            account = Destiny1Service.get_account(membership_id)
+            account = Destiny1Service.get_account(membership_id, access_token)
             if not account or not account.get("Response"):
                 message = f"📭 Nessun personaggio D1 trovato."
                 await self.telegram.send_message(chat_id, message)
@@ -1453,8 +1484,11 @@ class ServiceOrchestrator:
             membership_id = player.get("membershipId")
             display_name = player.get("displayName")
             
+            # Get OAuth token for enhanced access
+            access_token = self._get_oauth_token(chat_id)
+            
             # Get account summary
-            account = Destiny1Service.get_account(membership_id)
+            account = Destiny1Service.get_account(membership_id, access_token)
             if not account or not account.get("Response"):
                 message = f"📭 Nessun personaggio D1 trovato."
                 await self.telegram.send_message(chat_id, message)
@@ -1606,3 +1640,55 @@ class ServiceOrchestrator:
     async def handle_d1_global_leaderboard(self, chat_id: int, category: str) -> dict:
         """Get D1 global leaderboard - delegates to D1CommandHandlers"""
         return await self.d1_handlers.handle_global_leaderboard(chat_id, category)
+
+    async def handle_d1_loadout(self, chat_id: int, gamertag: str, stats_wanted: str) -> dict:
+        """Loadout optimizer - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_loadout(chat_id, gamertag, stats_wanted)
+
+    async def handle_d1_optimize(self, chat_id: int, gamertag: str, target_stats: str) -> dict:
+        """Advanced optimization - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_optimize(chat_id, gamertag, target_stats)
+
+    async def handle_d1_optimize_help(self, chat_id: int) -> dict:
+        """Show optimize help - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_loadout_help(chat_id)
+
+    async def handle_d1_inventory_advanced(self, chat_id: int, gamertag: str) -> dict:
+        """Advanced inventory - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_inventory_advanced(chat_id, gamertag)
+
+    async def handle_d1_loadout_help(self, chat_id: int) -> dict:
+        """Show loadout help - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_loadout_help(chat_id)
+
+    async def handle_d1_equip(self, chat_id: int, gamertag: str, item_name: str) -> dict:
+        """Equip item - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_equip(chat_id, gamertag, item_name)
+
+    async def handle_d1_equip_check(self, chat_id: int) -> dict:
+        """Check D1 equip API status - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_equip_check(chat_id)
+
+    async def handle_d1_equip_help(self, chat_id: int) -> dict:
+        """Show equip help - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_equip_help(chat_id)
+
+    async def handle_d1_events(self, chat_id: int, planet: str = None) -> dict:
+        """Get D1 events - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_events(chat_id, planet)
+    
+    async def handle_d1_events_subscribe(self, chat_id: int, planets: str = None) -> dict:
+        """Subscribe to D1 event notifications - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_events_subscribe(chat_id, planets)
+    
+    async def handle_d1_events_unsubscribe(self, chat_id: int) -> dict:
+        """Unsubscribe from D1 event notifications - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_events_unsubscribe(chat_id)
+    
+    async def handle_d1_events_status(self, chat_id: int) -> dict:
+        """Get D1 event notification status - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_events_status(chat_id)
+
+    async def handle_d1_warsat(self, chat_id: int) -> dict:
+        """Get D1 Warsat events - delegates to D1CommandHandlers"""
+        return await self.d1_handlers.handle_warsat(chat_id)

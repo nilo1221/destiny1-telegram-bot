@@ -302,15 +302,42 @@ class Destiny1Formatter:
 
     @staticmethod
     def xur_not_available() -> str:
-        """Format Xur not available message with mysterious Nine theme"""
+        """Format Xur not available message with mysterious Nine theme and countdown"""
+        from datetime import datetime, timedelta
+        
+        now = datetime.utcnow()
+        current_day = now.weekday()
+        current_hour = now.hour
+        
+        # Calculate next Friday 18:00 CET (17:00 UTC)
+        days_until_friday = (4 - current_day) % 7
+        if days_until_friday == 0 and current_hour >= 17:
+            days_until_friday = 7
+        
+        next_xur = now + timedelta(days=days_until_friday)
+        next_xur = next_xur.replace(hour=17, minute=0, second=0, microsecond=0)
+        
+        # Calculate countdown
+        time_until = next_xur - now
+        days = time_until.days
+        hours, remainder = divmod(time_until.seconds, 3600)
+        minutes = remainder // 60
+        
+        if days > 0:
+            countdown = f"{days}g {hours}h {minutes}m"
+        elif hours > 0:
+            countdown = f"{hours}h {minutes}m"
+        else:
+            countdown = f"{minutes}m"
+        
         return (
-            "🌌 <b>Xûr, Agente dei Nove</b>\n\n"
-            "👳‍♂️ <i>\"Non sono i miei possessi che cerco...\"</i>\n\n"
-            "😔 <b>Non disponibile al momento</b>\n"
-            "⏰ Arriva: <b>Venerdì 18:00 CET</b>\n"
-            "🕐 Partenza: <b>Martedì Reset 18:00 CET</b>\n\n"
-            "<i>🌌 I Nove osservano... aspettano...</i>\n"
-            "<i>⚡ Porta Strane Monete e Leggende</i>"
+            f"🌌 <b>Xûr, Agente dei Nove</b>\n\n"
+            f"👳‍♂️ <i>\"Non sono i miei possessi che cerco...\"</i>\n\n"
+            f"😔 <b>Non disponibile al momento</b>\n"
+            f"⏳ <b>Arriva tra:</b> <code>{countdown}</code>\n"
+            f"� Venerdì 18:00 CET\n\n"
+            f"<i>🌌 I Nove osservano... aspettano...</i>\n"
+            f"<i>⚡ Porta Strane Monete e Leggende</i>"
         )
 
     @staticmethod

@@ -11,13 +11,13 @@ log() {
 
 start_server() {
     log "Avvio server..."
-    source .venv/bin/activate
-    nohup python run.py > /tmp/helix.log 2>&1 &
+    source venv/bin/activate
+    nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > /tmp/helix.log 2>&1 &
     echo $! > "$PID_FILE"
     sleep 3
     
     # Verifica
-    if curl -s http://localhost:8001/api/v1/health | grep -q "healthy"; then
+    if curl -s http://localhost:8000/ | grep -q "Helix"; then
         log "✅ Server avviato (PID: $(cat $PID_FILE))"
         return 0
     else
@@ -30,14 +30,14 @@ start_tunnel() {
     log "Avvio tunnel..."
     pkill -f localtunnel 2>/dev/null
     sleep 1
-    nohup npx localtunnel --port 8001 > /tmp/lt.log 2>&1 &
+    nohup npx localtunnel --port 8000 > /tmp/lt.log 2>&1 &
     echo $! > "$TUNNEL_PID"
     sleep 5
     
     URL=$(grep "your url is" /tmp/lt.log | tail -1 | grep -o "https://[^ ]*\.loca\.lt")
     if [ -n "$URL" ]; then
         curl -s -X POST "https://api.telegram.org/bot8377848932:AAF2RDlzP0Mv5f_jZq_GvxCRZkBsHjXQV-Q/setWebhook" \
-            -d "url=${URL}/api/v1/webhook/telegram" > /dev/null
+            -d "url=${URL}/webhook" > /dev/null
         log "✅ Tunnel attivo: $URL"
         return 0
     else
@@ -48,7 +48,7 @@ start_tunnel() {
 
 stop_all() {
     log "Arresto servizi..."
-    pkill -f "python.*run.py" 2>/dev/null
+    pkill -f "uvicorn\|python.*app.main" 2>/dev/null
     pkill -f localtunnel 2>/dev/null
     rm -f "$PID_FILE" "$TUNNEL_PID"
     sleep 2
@@ -56,7 +56,7 @@ stop_all() {
 
 check_health() {
     # Controlla server
-    if ! curl -s http://localhost:8001/api/v1/health | grep -q "healthy"; then
+    if ! curl -s http://localhost:8000/ | grep -q "Helix"; then
         log "⚠️ Server non risponde, riavvio..."
         return 1
     fi
